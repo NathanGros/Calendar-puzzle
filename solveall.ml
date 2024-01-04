@@ -14,37 +14,54 @@ type board_state =
 	piece_state list
 ;;
 
+let foi n =
+	float_of_int n
+;;
+
+let iof n =
+	int_of_float n
+;;
+
 (*global values*)
+init_window 0 0 "Calendar";;
+let w = get_screen_width ();;
+let h = get_screen_height ();;
 let valid_l = ref [];;
-(*let valid_l = ref [[(I,2);(D,2);(P,6);(X,2);(L,6);(V,1);(S,3);(E,3);(T,1);(O,1);(Z,10)]];;*)
 let sol_nb = ref 1;;
 let cursor_x = ref 100;;
-let today_l = [(2, 2); (3, 4); (4, 0)];;
 let button_pressed = ref false;;
 let not_gen = ref true;;
+let pannel_x = iof (foi w /. 3.5);;
+
+(*MODIFY THIS*)
+let today_l = [(2, 2); (3, 4); (4, 0)];;
+
 
 
 
 (*raylib functions*)
+
 let draw_board l =
-	let center_x = float_of_int ((get_screen_width () - 600) / 2 + 600) in
-	let center_y = float_of_int (get_screen_height () / 2 + 15) in
-	draw_poly (Vector2.create center_x center_y) 6 500. 30. (Color.create 184 186 187 255);
+	(*draw_board*)
+	let center_x = foi (w/2 + pannel_x/2) in
+	let center_y = foi (h/2 + 15) in
+	draw_poly (Vector2.create center_x center_y) 6 ((foi h) /. 2.) 30. (Color.create 184 186 187 255);
+	(*make board matrix from l*)
 	let board_matrix = Array.init 9 (fun i -> if i<4 then Array.make (5+i) N else Array.make 9 N) in
 	for i = 0 to List.length l - 1 do
 		let _ = Place.put_piece board_matrix today_l (List.nth l ((List.length l) - i - 1)) in ()
 	done;
 	(*draw tiles*)
-	let ext_rad = 53. in
+	let ext_rad = (foi h /. 19.) in
 	let int_rad = sqrt (3. /. 4. *. ext_rad *. ext_rad) in
 	for i = 0 to Array.length board_matrix - 1 do
 		for j = 0 to Array.length board_matrix.(i) - 1 do
 			if board_matrix.(i).(j) <> N then begin
-				let small_center_y = 240. +. 3. /. 2. *. ext_rad *. (float_of_int i) in
+				let small_center_y = (center_y -. 6. *. ext_rad) +. 3. /. 2. *. ext_rad *. (foi i) in
 				let small_center_x =
 					match i mod 2 with
-					|0 -> 615. +. 2. *. int_rad *. ((float_of_int j) +. (float_of_int (5 - i/2)))
-					|_ -> 615. +. 2. *. int_rad *. ((float_of_int j) +. (float_of_int (5 - i/2))) -. int_rad
+					|0 -> (center_x -. 4. *. int_rad) +. 2. *. int_rad *. (foi (j - i/2))
+					|_ -> (center_x -. 4. *. int_rad) +. 2. *. int_rad *. (foi (j - i/2)) -. int_rad
 				in
 				let col =
 					match board_matrix.(i).(j) with
@@ -71,57 +88,53 @@ let draw_board l =
 
 
 let draw_cursor () =
-	draw_rectangle 80 (get_screen_height () / 2 - 20) 440 40 (Color.create 212 215 216 255);
+	draw_rectangle 80 (h/2 - 20) (pannel_x - 160) 40 (Color.create 212 215 216 255);
 	let len = List.length !valid_l in
 	match len with
-	|0 -> draw_rectangle 87 (get_screen_height () / 2 - 13) 26 26 (Color.create 255 255 255 255)
-	|_ ->	draw_rectangle (400 * !sol_nb / len + 100 - 13) (get_screen_height () / 2 - 13) 26 26 (Color.create 255 255 255 255)
+	|0 -> draw_rectangle 87 (h/2 - 13) 26 26 (Color.create 255 255 255 255)
+	|_ ->	draw_rectangle (87 + (pannel_x - 200) * !sol_nb / len) (h/2 - 13) 26 26 (Color.create 255 255 255 255)
 ;;
 
 
 let draw_nb () =
-	draw_rectangle 100 (get_screen_height () / 2 - 95) 250 56 (Color.create 212 215 216 255);
-	draw_text (string_of_int !sol_nb) 110 (get_screen_height () / 2 - 90) 50 (Color.create 255 255 255 255);
+	draw_rectangle 100 (h/2 - 95) (pannel_x - 160 - 192) 56 (Color.create 212 215 216 255);
+	draw_text (string_of_int !sol_nb) 110 (h/2 - 90) 50 (Color.create 255 255 255 255);
 ;;
 
 
 let draw_buttons () =
-	draw_rectangle 368 (get_screen_height () / 2 - 95) 56 56 (Color.create 212 215 216 255);
-	draw_rectangle 378 (get_screen_height () / 2 - 95 + 24) 36 8 (Color.create 255 255 255 255);
-	draw_rectangle 444 (get_screen_height () / 2 - 95) 56 56 (Color.create 212 215 216 255);
-	draw_rectangle 454 (get_screen_height () / 2 - 95 + 24) 36 8 (Color.create 255 255 255 255);
-	draw_rectangle 468 (get_screen_height () / 2 - 95 + 10) 8 36 (Color.create 255 255 255 255);
+	let button_top_y = h/2 - 95 in
+	let minus_button_x = (pannel_x - 160 - 192) + 120 in
+	draw_rectangle minus_button_x button_top_y 56 56 (Color.create 212 215 216 255);
+	draw_rectangle (minus_button_x + 10) (button_top_y + 24) 36 8 (Color.create 255 255 255 255);
+	let plus_button_x = (pannel_x - 160 - 192) + 120 + 76 in
+	draw_rectangle plus_button_x button_top_y 56 56 (Color.create 212 215 216 255);
+	draw_rectangle (plus_button_x + 10) (button_top_y + 24) 36 8 (Color.create 255 255 255 255);
+	draw_rectangle (plus_button_x + 24) (button_top_y + 10) 8 36 (Color.create 255 255 255 255);
 ;;
 
 
-let window_init () =
-	init_window 0 0 "Calendar";
-	(*background*)
-	clear_background (Color.create 212 215 216 255);
-	draw_rectangle 0 0 (600) (get_screen_height ()) (Color.create 184 186 187 255);
-
+let draw_all l =
 	draw_cursor ();
 	draw_nb ();
 	draw_buttons ();
-	draw_board [];
-
-	set_target_fps 60
+	draw_board l
 ;;
 
 
 let run_window () =
 	let x = get_mouse_x () in
 	let y = get_mouse_y () in
-	let button_minus = Rectangle.create 368. (float_of_int (get_screen_height () / 2 - 95)) 56. 56. in
-	let button_plus = Rectangle.create 444. (float_of_int (get_screen_height () / 2 - 95)) 56. 56. in
+	let button_minus = Rectangle.create (foi (pannel_x - 160 - 192 + 120)) (foi (h/2 - 95)) 56. 56. in
+	let button_plus = Rectangle.create (foi (pannel_x - 160 - 192 + 120 + 76)) (foi (h/2 - 95)) 56. 56. in
 	if not (is_mouse_button_down Left) then button_pressed := false;
 	if is_mouse_button_pressed Left then begin
-		if check_collision_point_rec (Vector2.create (float_of_int x) (float_of_int y)) button_minus then (button_pressed := true; sol_nb := !sol_nb - 1);
-		if check_collision_point_rec (Vector2.create (float_of_int x) (float_of_int y)) button_plus then (button_pressed := true; sol_nb := !sol_nb + 1);
+		if check_collision_point_rec (Vector2.create (foi x) (foi y)) button_minus then (button_pressed := true; sol_nb := !sol_nb - 1);
+		if check_collision_point_rec (Vector2.create (foi x) (foi y)) button_plus then (button_pressed := true; sol_nb := !sol_nb + 1);
 		if !sol_nb < 1 then sol_nb := 1;
 		if !sol_nb > List.length !valid_l then sol_nb := List.length !valid_l;
 		clear_background (Color.create 212 215 216 255);
-		draw_rectangle 0 0 (600) (get_screen_height ()) (Color.create 184 186 187 255);
+		draw_rectangle 0 0 pannel_x h (Color.create 184 186 187 255);
 		draw_buttons ();
 		draw_nb ();
 		draw_cursor ();
@@ -132,18 +145,18 @@ let run_window () =
 		if x < 100 then
 			(sol_nb := 1; cursor_x := 100)
 		;
-		if x > 100 && x < 500 then
-			(sol_nb := 1 + int_of_float (float_of_int (List.length !valid_l) *. (float_of_int x -. 100.) /. 400.); cursor_x := x)
+		if x > 100 && x < (pannel_x - 100) then
+			(sol_nb := 1 + iof (foi (List.length !valid_l * (x - 100)) /. foi (pannel_x - 200)); cursor_x := x)
 		;
-		if x > 500 then
-			(sol_nb := List.length !valid_l; cursor_x := 500)
+		if x > (pannel_x - 100) then
+			(sol_nb := List.length !valid_l; cursor_x := (pannel_x - 100))
 		;
 		clear_background (Color.create 212 215 216 255);
-		draw_rectangle 0 0 (600) (get_screen_height ()) (Color.create 184 186 187 255);
+		draw_rectangle 0 0 pannel_x h (Color.create 184 186 187 255);
 		draw_buttons ();
 		(*cursor drawing*)
-		draw_rectangle 80 (get_screen_height () / 2 - 20) 440 40 (Color.create 212 215 216 255);
-		draw_rectangle (!cursor_x - 13) (get_screen_height () / 2 - 13) 26 26 (Color.create 255 255 255 255);
+		draw_rectangle 80 (h/2 - 20) (pannel_x - 160) 40 (Color.create 212 215 216 255);
+		draw_rectangle (!cursor_x - 13) (h/2 - 13) 26 26 (Color.create 255 255 255 255);
 
 		draw_nb ();
 		draw_board (List.nth !valid_l (!sol_nb - 1))
@@ -197,7 +210,7 @@ let rec backtrack board (used_l : board_state) =
 		valid_l := used_l::!valid_l;
 		sol_nb := !sol_nb + 1;
 		clear_background (Color.create 212 215 216 255);
-		draw_rectangle 0 0 (600) (get_screen_height ()) (Color.create 184 186 187 255);
+		draw_rectangle 0 0 pannel_x h (Color.create 184 186 187 255);
 		(*draw cursor*)
 		let int_piece = int_of_piece (fst (List.nth used_l (List.length used_l - 1))) in
 		let rot_piece = snd (List.nth used_l (List.length used_l - 1)) in
@@ -206,9 +219,10 @@ let rec backtrack board (used_l : board_state) =
 		for i = 0 to 10 do
 			if i < int_piece then total_piece_frac := !total_piece_frac + (nb_orient t.(i))
 		done;
-		let cursor_len = int_of_float (426. /. 74. *. (float_of_int !total_piece_frac)) in
-		draw_rectangle 80 (get_screen_height () / 2 - 20) 440 40 (Color.create 212 215 216 255);
-		draw_rectangle 87 (get_screen_height () / 2 - 13) cursor_len 26 (Color.create 255 255 255 255);
+		let cursor_len = iof (foi (pannel_x - 160 - 54) /. 74. *. (foi !total_piece_frac)) in
+		draw_rectangle 80 (h/2 - 20) (pannel_x - 160) 40 (Color.create 212 215 216 255);
+		draw_rectangle 87 (h/2 - 13) 26 26 (Color.create 255 255 255 255);
+		draw_rectangle 113 (h/2 - 13) cursor_len 26 (Color.create 255 255 255 255);
 
 		draw_nb ();
 		draw_buttons ();
@@ -251,6 +265,13 @@ let rec loop () =
 
 let _ =
 	print_string "\x1B[2J";
-	window_init ();
+
+	(*background*)
+	clear_background (Color.create 212 215 216 255);
+	draw_rectangle 0 0 pannel_x h (Color.create 184 186 187 255);
+
+	draw_all [];
+
+	set_target_fps 60;
 	loop ()
 ;;
