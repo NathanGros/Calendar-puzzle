@@ -1,0 +1,6 @@
+(executable
+	(name solveall)
+	(libraries raylib))
+(env
+  (dev
+    (flags (:standard -w -37 -w -52 -w -32))))
